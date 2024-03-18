@@ -1,8 +1,8 @@
-# Ignore everything
-*
-
 # Don't ignore .tf files
 !.*.tf
 
 # But do ignore provider.tf
 provider.tf
+
+# Ignore all terraform backend files
+*terraform*
