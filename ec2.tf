@@ -24,7 +24,7 @@ resource "aws_instance" "ec2_instance" {
     instance_metadata_tags = "enabled"
   }
 
-  iam_instance_profile = var.ec2_instance_profile
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
   vpc_security_group_ids = [aws_security_group.instance_security_group.id]
 }
@@ -75,4 +75,11 @@ resource "aws_iam_role" "ec2_instance_role" {
 resource "aws_iam_instance_profile" "ec2_instance_profile" {
   name = var.ec2_instance_profile
   role = aws_iam_role.ec2_instance_role.name
+}
+
+# ---------------------
+# Output public DNS of EC2
+
+output "ec2_instance_public_dns" {
+  value = aws_instance.ec2_instance.public_dns
 }
