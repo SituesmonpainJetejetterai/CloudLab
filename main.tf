@@ -1,3 +1,9 @@
+# Dependency inversion is the cornerstone of being able to write Terraform modules
+# 1. Create outputs for variables that would need to be passed to the other module(s)
+# 2. Assign variables in the local variables.tf of said module, and provide default values for variables in the root main.tf
+# 3. Utilise the structure "module.<output_module_name>.variable" to pass variables to the latter module
+# https://developer.hashicorp.com/terraform/language/modules/develop/composition#dependency-inversion
+
 module "ec2" {
   source          = "./modules/ec2"
   security_groups = module.vpc.ec2_instance_security_group_k8s
