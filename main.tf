@@ -5,25 +5,38 @@
 # https://developer.hashicorp.com/terraform/language/modules/develop/composition#dependency-inversion
 
 module "ec2" {
-  source          = "./modules/ec2"
-  security_groups = module.vpc.ec2_instance_security_group_k8s
-  subnet_id       = module.vpc.public_subnet_id
+  source = "./modules/ec2"
+
+  security_groups     = module.vpc.ec2_instance_security_group_k8s
+  subnet_id           = module.vpc.public_subnet_id
+  public_subnet_cidr  = module.vpc.public_subnet_cidr
+  private_subnet_cidr = module.vpc.private_subnet_cidr
 
   ec2_instance_profile_k8s = "ec2_instance_profile_k8s"
   ec2_instance_role_k8s    = "ec2_instance_role_k8s"
+
+  ec2_instance_profile_saltstack = "ec2_instance_profile_saltstack"
+  ec2_instance_role_saltstack    = "ec2_instance_role_saltstack"
 
   ec2_role_path = "/cloud_project/"
 
   ami_id          = "ami-0fe630eb857a6ec83"
   instance_type   = "t2.micro"
   public_key_path = "~/.ssh/ec2_instance_key.pub"
-
-  ec2_instance_profile_saltstack = "ec2_instance_profile_saltstack"
-  ec2_instance_role_saltstack    = "ec2_instance_role_saltstack"
 }
 
 module "vpc" {
   source = "./modules/vpc"
+
+  aws_vpc_ipam_pool_cidr = "10.1.0.0/16"
+  ssh_from_port          = "22"
+  ssh_to_port            = "22"
+  https_from_port        = "443"
+  https_to_port          = "443"
+  dns_from_port          = "53"
+  dns_to_port            = "53"
+  saltstack_from_port    = "4505"
+  saltstack_to_port      = "4506"
 }
 
 # ----------------------
