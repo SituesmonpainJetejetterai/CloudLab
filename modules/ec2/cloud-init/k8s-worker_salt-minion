@@ -1,0 +1,23 @@
+#cloud-config
+package_upgrade: true
+
+# ${salt_master_dns} is a terraform variable which will be passed in through the terraform template to provide the domain of the salt master dynamically.
+
+write_files:
+  - path: /etc/salt/minion
+    content: |
+      master: ${salt_master_dns}
+
+runcmd:
+  - cd /tmp/
+  - curl -o bootstrap-salt.sh -L "https://bootstrap.saltproject.io"
+  - sudo sh bootstrap-salt.sh git master
+  - cd -
+
+runcmd:
+  - cd /tmp/
+  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+  - sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+  - cd -
+  - kubectl version --client

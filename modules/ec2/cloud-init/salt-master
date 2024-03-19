@@ -1,0 +1,21 @@
+#cloud-config
+package_upgrade: true
+
+runcmd:
+  - cd /tmp/
+  - curl -o bootstrap-salt.sh -L "https://bootstrap.saltproject.io"
+  - sudo sh bootstrap-salt.sh git master
+  - cd -
+
+write_files:
+  - path: /etc/salt/master
+    content: |
+      user: root
+      log_level: debug
+
+firewall:
+  enabled: true
+  rules:
+    - protocol: tcp
+      destination_port: 4505-4506
+      source: ${private_subnet_cidr}
