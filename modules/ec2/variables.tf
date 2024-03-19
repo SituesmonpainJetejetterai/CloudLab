@@ -39,3 +39,7 @@ variable "ec2_instance_role_saltstack" {
 variable "subnet_id" {}
 
 variable "security_groups" {}
+
+variable "public_subnet_cidr" {}
+
+variable "private_subnet_cidr" {}
