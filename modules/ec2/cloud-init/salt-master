@@ -2,9 +2,10 @@
 package_upgrade: true
 
 runcmd:
-  - cd /tmp/
+  - mkdir -p /tmp/salt/
+  - cd /tmp/salt/
   - curl -o bootstrap-salt.sh -L "https://bootstrap.saltproject.io"
-  - sudo sh bootstrap-salt.sh git master
+  - sudo sh bootstrap-salt.sh -M -N git master
   - cd -
 
 write_files:

@@ -1,23 +1,55 @@
 #cloud-config
+
 package_upgrade: true
 
-# ${salt_master_dns} is a terraform variable which will be passed in through the terraform template to provide the domain of the salt master dynamically.
+packages:
+  - jq
+  - curl
+  - vim
+
+runcmd:
+  # Install Salt Minion
+  - mkdir -p /tmp/salt-minion/ && cd /tmp/salt-minion
+  - curl -L https://bootstrap.saltstack.com -o install_salt.sh
+  - sudo sh install_salt.sh
+  - cd
 
 write_files:
   - path: /etc/salt/minion
     content: |
       master: ${salt_master_dns}
 
+# Install docker to be able to run containerd and cni-plugins
 runcmd:
-  - cd /tmp/
-  - curl -o bootstrap-salt.sh -L "https://bootstrap.saltproject.io"
-  - sudo sh bootstrap-salt.sh git master
-  - cd -
+  - sudo yum install -y yum-utils
+  - sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  - sudo yum install -y containerd.io
+  # To-do: Install CNI plugins
 
 runcmd:
-  - cd /tmp/
-  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
-  - sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-  - cd -
-  - kubectl version --client
+  # Install Kubernetes
+  # Set SELinux in permissive mode (effectively disabling it)
+  - sudo setenforce 0
+  - sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+  - sudo touch "/etc/yum.repos.d/kubernetes.repo"
+  # This overwrites any existing configuration in /etc/yum.repos.d/kubernetes.repo
+  - |
+    cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+    [kubernetes]
+    name=Kubernetes
+    baseurl=https://pkgs.k8s.io/core:/stable:/$(curl -sSL https://dl.k8s.io/release/stable.txt | sed 's/\(\.[0-9]*\)\.[0-9]*/\1/')/rpm/
+    enabled=1
+    gpgcheck=1
+    gpgkey=https://pkgs.k8s.io/core:/stable:/$(curl -sSL https://dl.k8s.io/release/stable.txt | sed 's/\(\.[0-9]*\)\.[0-9]*/\1/')/rpm/repodata/repomd.xml.key
+    exclude=kubelet kubeadm kubectl cri-tools kubernetes-cni
+    EOF
+  # Install kubelet, kubeadm and kubectl
+  - sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
+  - sudo systemctl enable --now kubelet
+
+final_message: |
+  cloud-init has finished
+  version: $version
+  timestamp: $timestamp
+  datasource: $datasource
+  uptime: $uptime
