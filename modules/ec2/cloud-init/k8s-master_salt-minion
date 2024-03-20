@@ -1,36 +1,83 @@
 #cloud-config
 
+package_update: true
 package_upgrade: true
 
 packages:
   - jq
   - curl
+  - tar
   - vim
+  - wget
 
 runcmd:
+  # Set SELinux in permissive mode (effectively disabling it)
+  - sudo setenforce 0
+  - sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
+
   # Install Salt Minion
   - mkdir -p /tmp/salt-minion/ && cd /tmp/salt-minion
   - curl -L https://bootstrap.saltstack.com -o install_salt.sh
   - sudo sh install_salt.sh
   - cd
 
-write_files:
-  - path: /etc/salt/minion
-    content: |
-      master: ${salt_master_dns}
+  # Network prerequisites for kubeadm
+  - |
+    cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+    overlay
+    br_netfilter
+    EOF
+  - |
+    sudo modprobe overlay
+    sudo modprobe br_netfilter
+  - |
+    sudo mkdir -p /etc/sysctl.d/
+    cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+    net.bridge.bridge-nf-call-iptables  = 1
+    net.bridge.bridge-nf-call-ip6tables = 1
+    net.ipv4.ip_forward                 = 1
+    EOF
+  - sudo sysctl --system
 
-# Install docker to be able to run containerd and cni-plugins
-runcmd:
-  - sudo yum install -y yum-utils
-  - sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-  - sudo yum install -y containerd.io
-  # To-do: Install CNI plugins
+  # Install containerd
+  - |
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/containerd/containerd/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+    LATEST_VERSION=$(printf "%s" $LATEST_RELEASE | sed 's/v//')
+    OS="linux"
+    ARCH="amd64"
+    URL_CONTAINERD_SERVICE="https://raw.githubusercontent.com/containerd/containerd/main/containerd.service"
+  - URL="https://github.com/containerd/containerd/releases/download/$LATEST_RELEASE/containerd-$LATEST_VERSION-$OS-$ARCH.tar.gz"
+  - wget /tmp/containerd-$LATEST_VERSION-$OS-$ARCH.tar.gz $URL
+  - sudo tar -C /usr/local/ -xzvf "$(find . -type f -name 'containerd-*.tar.gz')"
+  - sudo mkdir -p /usr/local/lib/systemd/system
+  - sudo curl -o /usr/local/lib/systemd/system/containerd.service $URL_CONTAINERD_SERVICE
+  - |
+    sudo systemctl daemon-reload
+    sudo systemctl enable --now containerd
+  - |
+    sudo mkdir -p /etc/containerd/
+    # https://github.com/kodekloudhub/certified-kubernetes-administrator-course/blob/master/kubeadm-clusters/generic/04-node-setup.md
+    containerd config default | sed 's/SystemdCgroup = false/SystemdCgroup = true/' | sudo tee /etc/containerd/config.toml
+  - sudo systemctl restart containerd
 
-runcmd:
+  # Install runc
+  - RUNC_URL=$(curl -s https://api.github.com/repos/opencontainers/runc/releases/latest | grep 'browser_download_url' | grep 'runc.amd64"$' | sed 's/.*\(http[^\"]*\)\".*/\1/')
+  - curl -o /tmp/runc $RUNC_URL
+  - sudo install -m 755 /tmp/runc /usr/local/sbin/runc
+
+  # Install CNI plugins
+  - DEST_DIR="/opt/cni/bin"
+  - sudo mkdir -p $DEST_DIR
+  - LATEST_RELEASE=$(curl -s "https://api.github.com/repos/containernetworking/plugins/releases/latest" | awk -F'"' '/tag_name/{print $4}')
+  - |
+    OS="linux"
+    ARCH="amd64"
+  - URL="https://github.com/containernetworking/plugins/releases/download/$LATEST_RELEASE/cni-plugins-$OS-$ARCH-$LATEST_RELEASE.tgz"
+  - curl -L $URL -o /tmp/cni-plugins.tgz
+  - tar Cxzvf $DEST_DIR /tmp/cni-plugins.tgz
+  - rm /tmp/cni-plugins.tgz
+
   # Install Kubernetes
-  # Set SELinux in permissive mode (effectively disabling it)
-  - sudo setenforce 0
-  - sudo sed -i 's/^SELINUX=enforcing$/SELINUX=permissive/' /etc/selinux/config
   - sudo touch "/etc/yum.repos.d/kubernetes.repo"
   # This overwrites any existing configuration in /etc/yum.repos.d/kubernetes.repo
   - |
@@ -46,6 +93,11 @@ runcmd:
   # Install kubelet, kubeadm and kubectl
   - sudo yum install -y kubelet kubeadm kubectl --disableexcludes=kubernetes
   - sudo systemctl enable --now kubelet
+
+write_files:
+  - path: /etc/salt/minion
+    content: |
+      master: ${salt_master_dns}
 
 final_message: |
   cloud-init has finished
