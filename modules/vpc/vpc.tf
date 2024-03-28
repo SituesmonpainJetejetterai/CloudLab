@@ -101,17 +101,12 @@ resource "aws_route_table_association" "aws_route_table_association_subnet" {
   route_table_id = aws_route_table.route_table.id
 }
 
-# resource "aws_route_table_association" "aws_route_table_association_gateway" {
-#   gateway_id     = aws_internet_gateway.igw.id
-#   route_table_id = aws_route_table.route_table.id
-# }
-
 # -----------------
 # Security group configuration
 
 resource "aws_security_group" "instance_security_group_k8s" {
   name        = "instance_security_group_k8s"
-  description = "Saltstack, HTTPS, k8s, SSH"
+  description = "SSH"
   vpc_id      = aws_vpc.aws_vpc.id
 
   tags = {
@@ -121,7 +116,7 @@ resource "aws_security_group" "instance_security_group_k8s" {
 
 # SSH rules
 
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4_k8s" {
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4" {
   security_group_id = aws_security_group.instance_security_group_k8s.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = var.ssh_from_port
@@ -129,16 +124,7 @@ resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_
   to_port           = var.ssh_to_port
 }
 
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_ssh_ipv4_k8s" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
-
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6_k8s" {
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6" {
   security_group_id = aws_security_group.instance_security_group_k8s.id
   cidr_ipv6         = "::/0"
   from_port         = var.ssh_from_port
@@ -146,60 +132,19 @@ resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_
   to_port           = var.ssh_to_port
 }
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_ssh_ipv6_k8s" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
-  cidr_ipv6         = "::/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
+# Egress rules
 
-# Saltstack rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_saltstack_k8s" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
-  cidr_ipv4         = local.public_subnet_cidr
-  from_port         = var.saltstack_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.saltstack_to_port
-}
-
-# HTTPS rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_https_ipv4_k8s" {
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4" {
   security_group_id = aws_security_group.instance_security_group_k8s.id
   cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.https_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.https_to_port
+  ip_protocol       = "-1"
 }
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_https_ipv6_k8s" {
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6" {
   security_group_id = aws_security_group.instance_security_group_k8s.id
   cidr_ipv6         = "::/0"
-  from_port         = var.https_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.https_to_port
+  ip_protocol       = "-1"
 }
-
-# DNS rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_dns_ipv4_k8s" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.dns_from_port
-  ip_protocol       = "udp"
-  to_port           = var.dns_to_port
-}
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_dns_ipv6_k8s" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
-  cidr_ipv6         = "::/0"
-  from_port         = var.dns_from_port
-  ip_protocol       = "udp"
-  to_port           = var.dns_to_port
-}
-
 
 # -----------------
 # -----------------
@@ -225,24 +170,7 @@ resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_
   to_port           = var.ssh_to_port
 }
 
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_ssh_ipv4_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
-
 resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv6         = "::/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_ssh_ipv6_saltstack" {
   security_group_id = aws_security_group.instance_security_group_saltstack_master.id
   cidr_ipv6         = "::/0"
   from_port         = var.ssh_from_port
@@ -260,48 +188,18 @@ resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_
   to_port           = var.saltstack_to_port
 }
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_saltstack_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = local.public_subnet_cidr
-  from_port         = var.saltstack_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.saltstack_to_port
-}
+# Egress rules
 
-# HTTPS rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_https_ipv4_saltstack" {
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4_saltstack" {
   security_group_id = aws_security_group.instance_security_group_saltstack_master.id
   cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.https_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.https_to_port
+  ip_protocol       = "-1"
 }
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_https_ipv6_saltstack" {
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6_saltstack" {
   security_group_id = aws_security_group.instance_security_group_saltstack_master.id
   cidr_ipv6         = "::/0"
-  from_port         = var.https_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.https_to_port
-}
-
-# DNS rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_dns_ipv4_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.dns_from_port
-  ip_protocol       = "udp"
-  to_port           = var.dns_to_port
-}
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_dns_ipv6_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv6         = "::/0"
-  from_port         = var.dns_from_port
-  ip_protocol       = "udp"
-  to_port           = var.dns_to_port
+  ip_protocol       = "-1"
 }
 
 # ---------------------
