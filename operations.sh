@@ -9,6 +9,7 @@ s_function() {
 
 d_function() {
     printf "You called the -d flag. This flag is used to run 'terraform destroy'.\n"
+    terraform state pull
     terraform destroy
 }
 
@@ -24,6 +25,7 @@ p_function() {
 
 D_function() {
     printf "You called the -D flag. This flag is used to run 'terraform destroy -auto-approve'.\n"
+    terraform state pull
     terraform destroy -auto-approve
 }
 
