@@ -5,11 +5,13 @@ locals {
 }
 
 resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
+
   block_device_mappings {
-    device_name = "/dev/sdb"
+    device_name = "/dev/sda1"
+
     ebs {
+      volume_size = 80
       delete_on_termination = true
-      volume_size = 20
     }
   }
 
