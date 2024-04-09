@@ -15,13 +15,15 @@ module "ec2" {
   ec2_instance_profile_k8s = "ec2_instance_profile_k8s"
   ec2_instance_role_k8s    = "ec2_instance_role_k8s"
 
-  ec2_instance_profile_saltstack = "ec2_instance_profile_saltstack"
-  ec2_instance_role_saltstack    = "ec2_instance_role_saltstack"
+#   ec2_instance_profile_saltstack = "ec2_instance_profile_saltstack"
+#   ec2_instance_role_saltstack    = "ec2_instance_role_saltstack"
 
   ec2_role_path = "/cloud_project/"
 
-  ami_id          = "ami-0fe630eb857a6ec83"
-  instance_type   = "t2.micro"
+  # ami_id          = "ami-0fe630eb857a6ec83"  # Alma Linux 9 AMI
+  ami_id = "ami-0f936eaf4f00cc550"  # RHEL 9 AMI
+  # instance_type   = "t2.micro"
+  instance_type   = "t2.medium"
   public_key_path = "~/.ssh/ec2_instance_key.pub"
 }
 
@@ -35,8 +37,8 @@ module "vpc" {
   https_to_port          = "443"
   dns_from_port          = "53"
   dns_to_port            = "53"
-  saltstack_from_port    = "4505"
-  saltstack_to_port      = "4506"
+#   saltstack_from_port    = "4505"
+#   saltstack_to_port      = "4506"
 }
 
 # ----------------------
