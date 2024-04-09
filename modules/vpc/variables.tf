@@ -26,10 +26,10 @@ variable "dns_to_port" {
   type = string
 }
 
-variable "saltstack_from_port" {
-  type = string
-}
-
-variable "saltstack_to_port" {
-  type = string
-}
+# variable "saltstack_from_port" {
+#   type = string
+# }
+# 
+# variable "saltstack_to_port" {
+#   type = string
+# }

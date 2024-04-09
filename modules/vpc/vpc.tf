@@ -146,62 +146,6 @@ resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_al
   ip_protocol       = "-1"
 }
 
-# -----------------
-# -----------------
-# Security group configuration part 2
-
-resource "aws_security_group" "instance_security_group_saltstack_master" {
-  name        = "instance_security_group_saltstack_master"
-  description = "Saltstack, HTTPS, SSH"
-  vpc_id      = aws_vpc.aws_vpc.id
-
-  tags = {
-    Name = "instance_security_group"
-  }
-}
-
-# SSH rules
-
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
-
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv6         = "::/0"
-  from_port         = var.ssh_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.ssh_to_port
-}
-
-# Saltstack rules
-
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_saltstack_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = local.public_subnet_cidr
-  from_port         = var.saltstack_from_port
-  ip_protocol       = "tcp"
-  to_port           = var.saltstack_to_port
-}
-
-# Egress rules
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-}
-
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6_saltstack" {
-  security_group_id = aws_security_group.instance_security_group_saltstack_master.id
-  cidr_ipv6         = "::/0"
-  ip_protocol       = "-1"
-}
-
 # ---------------------
 # Outputs
 

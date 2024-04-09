@@ -27,12 +27,12 @@ variable "instance_type" {
 
 # -----------------
 
-variable "ec2_instance_profile_saltstack" {
-  type = string
-}
-variable "ec2_instance_role_saltstack" {
-  type = string
-}
+# variable "ec2_instance_profile_saltstack" {
+#   type = string
+# }
+# variable "ec2_instance_role_saltstack" {
+#   type = string
+# }
 
 # -----------------
 
