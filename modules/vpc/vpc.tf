@@ -102,10 +102,10 @@ resource "aws_route_table_association" "aws_route_table_association_subnet" {
 }
 
 # -----------------
-# Security group configuration
+# K8S master security group configuration
 
-resource "aws_security_group" "instance_security_group_k8s" {
-  name        = "instance_security_group_k8s"
+resource "aws_security_group" "instance_security_group_k8s_master" {
+  name        = "instance_security_group_k8s_master"
   description = "SSH"
   vpc_id      = aws_vpc.aws_vpc.id
 
@@ -116,32 +116,137 @@ resource "aws_security_group" "instance_security_group_k8s" {
 
 # SSH rules
 
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
   cidr_ipv4         = "0.0.0.0/0"
   from_port         = var.ssh_from_port
   ip_protocol       = "tcp"
   to_port           = var.ssh_to_port
 }
 
-resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
   cidr_ipv6         = "::/0"
   from_port         = var.ssh_from_port
   ip_protocol       = "tcp"
   to_port           = var.ssh_to_port
 }
 
+# K8S master rules
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_API_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 6443
+  ip_protocol       = "tcp"
+  to_port           = 6443
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_etcd_API_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 2379
+  ip_protocol       = "tcp"
+  to_port           = 2380
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_ControlPlane_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 10250
+  ip_protocol       = "tcp"
+  to_port           = 10250
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_kube-control-manager_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 10257
+  ip_protocol       = "tcp"
+  to_port           = 10257
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_kube-scheduler_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 10259
+  ip_protocol       = "tcp"
+  to_port           = 10259
+}
+
 # Egress rules
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
   cidr_ipv4         = "0.0.0.0/0"
   ip_protocol       = "-1"
 }
 
-resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6" {
-  security_group_id = aws_security_group.instance_security_group_k8s.id
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6_k8s_master" {
+  security_group_id = aws_security_group.instance_security_group_k8s_master.id
+  cidr_ipv6         = "::/0"
+  ip_protocol       = "-1"
+}
+
+# -----------------
+# k8s worker security group configuration
+
+resource "aws_security_group" "instance_security_group_k8s_worker" {
+  name        = "instance_security_group_k8s_worker"
+  description = "SSH"
+  vpc_id      = aws_vpc.aws_vpc.id
+
+  tags = {
+    Name = "instance_security_group"
+  }
+}
+
+# SSH rules
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv4_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = var.ssh_from_port
+  ip_protocol       = "tcp"
+  to_port           = var.ssh_to_port
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_ssh_ipv6_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
+  cidr_ipv6         = "::/0"
+  from_port         = var.ssh_from_port
+  ip_protocol       = "tcp"
+  to_port           = var.ssh_to_port
+}
+
+# K8S worker rules
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_kubelet-API_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 10250
+  ip_protocol       = "tcp"
+  to_port           = 10250
+}
+
+resource "aws_vpc_security_group_ingress_rule" "instance_security_group_ingress_k8s_NodePort_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
+  cidr_ipv4         = local.public_subnet_cidr
+  from_port         = 30000
+  ip_protocol       = "tcp"
+  to_port           = 32767
+}
+
+# Egress rules
+
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv4_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+}
+
+resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_all_ipv6_k8s_worker" {
+  security_group_id = aws_security_group.instance_security_group_k8s_worker.id
   cidr_ipv6         = "::/0"
   ip_protocol       = "-1"
 }
@@ -149,8 +254,14 @@ resource "aws_vpc_security_group_egress_rule" "instance_security_group_egress_al
 # ---------------------
 # Outputs
 
-output "ec2_instance_security_group_k8s" {
-  value = [aws_security_group.instance_security_group_k8s.id]
+output "ec2_instance_security_group_k8s_master" {
+  value = [aws_security_group.instance_security_group_k8s_master
+  .id]
+}
+
+output "ec2_instance_security_group_k8s_worker" {
+  value = [aws_security_group.instance_security_group_k8s_worker
+  .id]
 }
 
 output "public_subnet_id" {

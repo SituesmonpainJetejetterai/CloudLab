@@ -1,7 +1,14 @@
-variable "ec2_instance_profile_k8s" {
+variable "ec2_instance_profile_k8s_master" {
   type = string
 }
-variable "ec2_instance_role_k8s" {
+variable "ec2_instance_role_k8s_master" {
+  type = string
+}
+
+variable "ec2_instance_profile_k8s_worker" {
+  type = string
+}
+variable "ec2_instance_role_k8s_worker" {
   type = string
 }
 
@@ -38,7 +45,8 @@ variable "instance_type" {
 
 variable "subnet_id" {}
 
-variable "security_groups" {}
+variable "security_groups_master" {}
+variable "security_groups_worker" {}
 
 variable "public_subnet_cidr" {}
 

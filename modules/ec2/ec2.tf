@@ -6,7 +6,7 @@
 resource "aws_instance" "ec2_instance_k8s_master" {
   count = 1
   launch_template {
-    id      = aws_launch_template.ec2_instance_launch_template_k8s.id
+    id      = aws_launch_template.ec2_instance_launch_template_k8s_master.id
     version = "$Latest"
   }
 
@@ -21,7 +21,7 @@ resource "aws_instance" "ec2_instance_k8s_master" {
 resource "aws_instance" "ec2_instance_k8s_worker" {
   count = 2
   launch_template {
-    id      = aws_launch_template.ec2_instance_launch_template_k8s.id
+    id      = aws_launch_template.ec2_instance_launch_template_k8s_worker.id
     version = "$Latest"
   }
 
