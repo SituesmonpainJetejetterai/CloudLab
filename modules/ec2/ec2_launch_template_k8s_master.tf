@@ -1,10 +1,10 @@
 # https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/launch_template
 
 locals {
-  public_key = file(var.public_key_path)
+  public_key_master = file(var.public_key_path)
 }
 
-resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
+resource "aws_launch_template" "ec2_instance_launch_template_k8s_master"{
 
   block_device_mappings {
     device_name = "/dev/sda1"
@@ -15,14 +15,14 @@ resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
     }
   }
 
-  name = "ec2_launch_template_k8s"
+  name = "ec2_launch_template_k8s_master"
   description = "EC2 launch template"
 
   disable_api_stop = false
   disable_api_termination = false
 
   iam_instance_profile {
-    arn = aws_iam_instance_profile.ec2_instance_profile_k8s.arn
+    arn = aws_iam_instance_profile.ec2_instance_profile_k8s_master.arn
   }
 
   image_id = var.ami_id
@@ -30,7 +30,7 @@ resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
 
   instance_type = var.instance_type
 
-  key_name = aws_key_pair.ec2_instance_key_pair_k8s.key_name
+  key_name = aws_key_pair.ec2_instance_key_pair_k8s_master.key_name
 
   metadata_options {
     http_endpoint          = "enabled"
@@ -47,17 +47,14 @@ resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
     hostname_type = "ip-name"
   }
 
-#   vpc_security_group_ids = [aws_security_group.instance_security_group.id]
-
   network_interfaces {
     associate_public_ip_address = true
     delete_on_termination = true
     description = "default network interface"
     device_index = 0
-#     security_groups = [aws_security_group.instance_security_group_k8s.id]
 
     # Passing variables from ./main.tf here
-    security_groups = var.security_groups
+    security_groups = var.security_groups_master
     subnet_id       = var.subnet_id
   }
 
@@ -67,7 +64,7 @@ resource "aws_launch_template" "ec2_instance_launch_template_k8s"{
 # ----------------------
 # IAM role
 
-data "aws_iam_policy_document" "ec2_instance_policy_k8s" {
+data "aws_iam_policy_document" "ec2_instance_policy_k8s_master" {
   version = "2012-10-17"
   statement {
     effect = "Allow"
@@ -81,21 +78,21 @@ data "aws_iam_policy_document" "ec2_instance_policy_k8s" {
   }
 }
 
-resource "aws_iam_role" "ec2_instance_role_k8s" {
-  name               = var.ec2_instance_role_k8s
+resource "aws_iam_role" "ec2_instance_role_k8s_master" {
+  name               = var.ec2_instance_role_k8s_master
   path               = var.ec2_role_path
-  assume_role_policy = data.aws_iam_policy_document.ec2_instance_policy_k8s.json
+  assume_role_policy = data.aws_iam_policy_document.ec2_instance_policy_k8s_master.json
 }
 
-resource "aws_iam_instance_profile" "ec2_instance_profile_k8s" {
-  name = var.ec2_instance_profile_k8s
-  role = aws_iam_role.ec2_instance_role_k8s.name
+resource "aws_iam_instance_profile" "ec2_instance_profile_k8s_master" {
+  name = var.ec2_instance_profile_k8s_master
+  role = aws_iam_role.ec2_instance_role_k8s_master.name
 }
 
 # ----------------------
 # Key pair
 
-resource "aws_key_pair" "ec2_instance_key_pair_k8s" {
-  key_name   = "ec2_instance_key_pair_k8s"
-  public_key = local.public_key
+resource "aws_key_pair" "ec2_instance_key_pair_k8s_master" {
+  key_name   = "ec2_instance_key_pair_k8s_master"
+  public_key = local.public_key_master
 }
