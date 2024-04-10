@@ -39,8 +39,7 @@ DontRunAsRoot()
 {
     if [ "$(id -u)" -eq 0 ]
     then
-        echo "This script is not meant to be run with sudo/root privileges"
-        exit 1
+        echo "For better security, do not run as root" 2> /dev/null
     fi
 }
 
@@ -84,8 +83,8 @@ InstallOSPackages()
     # Install necessary packages
     sudo dnf install -y jq wget curl tar vim yum-utils ca-certificates gnupg ipset ipvsadm iproute-tc git net-tools bind-utils epel-release
 
-    sudo yum update -y
-    sudo yum install -y haveged
+    sudo dnf update -y
+    sudo dnf install -y haveged
 
     # Start the "haveged" service to improve entropy in order to build certificates, just in case
     sudo systemctl enable haveged.service
@@ -129,7 +128,7 @@ SetupFirewall()
         # API server
         sudo firewall-cmd --permanent --add-port=6443/tcp
         # etcd server client API
-        sudo firewall-cmd --permanent --add-port=2379-2380/tcp 
+        sudo firewall-cmd --permanent --add-port=2379-2380/tcp
         # Kubelet API
         sudo firewall-cmd --permanent --add-port=10250-10252/tcp
         # kubelet API server for read-only access with no authentication
@@ -152,7 +151,7 @@ SetupFirewall()
         sudo firewall-cmd --permanent --add-port=4250/tcp
         # VXLAN overlay
         sudo firewall-cmd --permanent --add-port=8472/udp
-        # cilium-agent Prometheus 
+        # cilium-agent Prometheus
         sudo firewall-cmd --permanent --add-port=9962-9964/tcp
         # WireGuard encryption tunnel endpoint
         sudo firewall-cmd --permanent --add-port=51871/udp
@@ -317,11 +316,15 @@ LaunchMaster()
 #     sudo chown "$(id -u $USER)":"$(id -g $USER)" "$HOME"/.kube/config
 
     USER="ec2-user" # AWS-specific, DO NOT USE IN PRODUCTION
+#     USER=id -un # Get user running the script
+
     HOME_DIR=$(getent passwd "$USER" | awk -F ':' '{print $6}')
     mkdir -p "$HOME_DIR"/.kube/
     cp -f /etc/kubernetes/admin.conf "$HOME_DIR"/.kube/config
     chown "$(id -u $USER)":"$(id -g $USER)" "$HOME_DIR"/.kube/config
-    export KUBECONFIG="$HOME_DIR"/.kube/config
+
+#   https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/#append-home-kube-config-to-your-kubeconfig-environment-variable
+    export KUBECONFIG="$KUBECONFIG":"$HOME_DIR"/.kube/config
 
 #    # Alternatively, if one is a root user, run this:
 #     export KUBECONFIG=/etc/kubernetes/admin.conf
@@ -442,7 +445,7 @@ main()
         exit 1
     fi
 
-#     DontRunAsRoot
+    DontRunAsRoot
 
 #     DisableSELinux
 
