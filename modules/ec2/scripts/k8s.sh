@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# ----------------
+# FQDN definitions
+
 # Can be controlplane or worker
 # NODE="controlplane"
 # NODE="worker"
@@ -9,13 +12,15 @@ KSHOST=""
 #KSHOST="k8sm01" # example Control Plane node
 #KSHOST="k8sw01" # example Worker node
 
-# ---
 # Example utilising external variables ${node_name} and ${count}
 NODE=${node_name}
 COUNT=${count}
-# #
 KSHOST="k8s-$NODE-$COUNT"
-# ---
+
+# ----------------
+# VARIABLES
+
+FIREWALL="no"
 
 KADM_OPTIONS=""
 # uncomment for ignoring warnings if setup not running with recommended specs
@@ -27,6 +32,9 @@ KUBEADM_CONFIG="/opt/k8s/kubeadm-config.yaml"
 # needed if running as root, or possibly some RedHat variant
 PATH="$PATH":/usr/local/bin
 export PATH
+
+# ----------------
+
 DontRunAsRoot()
 {
     if [ "$(id -u)" -eq 0 ]
@@ -74,7 +82,7 @@ InstallOSPackages()
     sudo dnf upgrade -y
 
     # Install necessary packages
-    sudo dnf install -y jq wget curl tar vim firewalld yum-utils ca-certificates gnupg ipset ipvsadm iproute-tc git net-tools bind-utils epel-release
+    sudo dnf install -y jq wget curl tar vim yum-utils ca-certificates gnupg ipset ipvsadm iproute-tc git net-tools bind-utils epel-release
 
     sudo yum update -y
     sudo yum install -y haveged
@@ -82,6 +90,11 @@ InstallOSPackages()
     # Start the "haveged" service to improve entropy in order to build certificates, just in case
     sudo systemctl enable haveged.service
     sudo chkconfig haveged on
+
+    if [ "$FIREWALL" != "no" ]
+    then
+        sudo dnf install -y firewalld
+    fi
 }
 
 KernelRebootWhenPanic()
@@ -101,18 +114,52 @@ SetupWatchdog()
 
 SetupFirewall()
 {
-    # Prerequisites for kubeadm
-    sudo systemctl --now enable firewalld
-    sudo firewall-cmd --permanent --add-port=6443/tcp
-    sudo firewall-cmd --permanent --add-port=2379-2380/tcp
-    sudo firewall-cmd --permanent --add-port=10250/tcp
-    sudo firewall-cmd --permanent --add-port=10251/tcp
-    sudo firewall-cmd --permanent --add-port=10252/tcp
-    sudo firewall-cmd --permanent --add-port=10255/tcp
-    sudo firewall-cmd --permanent --add-port=10257/tcp
-    sudo firewall-cmd --permanent --add-port=10259/tcp
-    sudo firewall-cmd --permanent --add-port=30000-32767/tcp
-    sudo firewall-cmd --reload
+    if [ "$FIREWALL" = "no" ]
+    then
+        sudo systemctl stop firewalld
+        sudo systemctl disable firewalld
+        echo "no firewall rules applied"
+        return
+    else
+        # Prerequisites for kubeadm
+        sudo systemctl --now enable firewalld
+
+        sudo firewall-cmd --permanent --zone=trusted --add-interface=lo
+
+        # API server
+        sudo firewall-cmd --permanent --add-port=6443/tcp
+        # etcd server client API
+        sudo firewall-cmd --permanent --add-port=2379-2380/tcp 
+        # Kubelet API
+        sudo firewall-cmd --permanent --add-port=10250-10252/tcp
+        # kubelet API server for read-only access with no authentication
+        sudo firewall-cmd --permanent --add-port=10255/tcp
+        # kube-controller-manager
+        sudo firewall-cmd --permanent --add-port=10257/tcp
+        # kube-scheduler
+        sudo firewall-cmd --permanent --add-port=10259/tcp
+        # NodePort services
+        sudo firewall-cmd --permanent --add-port=30000-32767/tcp
+
+        # https://docs.cilium.io/en/stable/operations/system_requirements/
+        # health checks
+        sudo firewall-cmd --permanent --add-port=4240/tcp
+        # Hubble server
+        sudo firewall-cmd --permanent --add-port=4244/tcp
+        # Hubble relay
+        sudo firewall-cmd --permanent --add-port=4245/tcp
+        # Mutual Authentication port
+        sudo firewall-cmd --permanent --add-port=4250/tcp
+        # VXLAN overlay
+        sudo firewall-cmd --permanent --add-port=8472/udp
+        # cilium-agent Prometheus 
+        sudo firewall-cmd --permanent --add-port=9962-9964/tcp
+        # WireGuard encryption tunnel endpoint
+        sudo firewall-cmd --permanent --add-port=51871/udp
+
+        sudo firewall-cmd --reload
+    fi
+
 }
 
 SystemSettings()
@@ -264,12 +311,20 @@ LaunchMaster()
     fi
 
     # Run as a normal, non-root user before configuring cluster
+
 #     mkdir -p "$HOME"/.kube
 #     sudo cp -f /etc/kubernetes/admin.conf "$HOME"/.kube/config
-#     sudo chown "$(id -u)":"$(id -g)" "$HOME"/.kube/config
+#     sudo chown "$(id -u $USER)":"$(id -g $USER)" "$HOME"/.kube/config
 
-    # Alternatively, if one is a root user, run this:
-    export KUBECONFIG=/etc/kubernetes/admin.conf
+    USER="ec2-user" # AWS-specific, DO NOT USE IN PRODUCTION
+    HOME_DIR=$(getent passwd "$USER" | awk -F ':' '{print $6}')
+    mkdir -p "$HOME_DIR"/.kube/
+    cp -f /etc/kubernetes/admin.conf "$HOME_DIR"/.kube/config
+    chown "$(id -u $USER)":"$(id -g $USER)" "$HOME_DIR"/.kube/config
+    export KUBECONFIG="$HOME_DIR"/.kube/config
+
+#    # Alternatively, if one is a root user, run this:
+#     export KUBECONFIG=/etc/kubernetes/admin.conf
 }
 
 CNI()
